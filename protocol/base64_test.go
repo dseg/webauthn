@@ -65,6 +65,63 @@ func TestURLEncodedBase64_UnmarshalJSON_Error(t *testing.T) {
 	}
 }
 
+// urlEncodedBase64Bench wraps URLEncodedBase64 fields of three representative sizes; under
+// GOEXPERIMENT=jsonv2 these benchmarks exercise URLEncodedBase64.UnmarshalJSONFrom /
+// MarshalJSONTo, under v1 they exercise the byte-slice UnmarshalJSON / MarshalJSON.
+type urlEncodedBase64Bench struct {
+	A URLEncodedBase64 `json:"a"`
+	B URLEncodedBase64 `json:"b"`
+	C URLEncodedBase64 `json:"c"`
+}
+
+func newURLEncodedBase64Bench() urlEncodedBase64Bench {
+	return urlEncodedBase64Bench{
+		A: make([]byte, 32),
+		B: make([]byte, 64),
+		C: make([]byte, 256),
+	}
+}
+
+func BenchmarkURLEncodedBase64Marshal(b *testing.B) {
+	in := newURLEncodedBase64Bench()
+
+	out, err := json.Marshal(in)
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	b.SetBytes(int64(len(out)))
+	b.ReportAllocs()
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		if _, err := json.Marshal(in); err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
+func BenchmarkURLEncodedBase64Unmarshal(b *testing.B) {
+	in := newURLEncodedBase64Bench()
+
+	buf, err := json.Marshal(in)
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	b.SetBytes(int64(len(buf)))
+	b.ReportAllocs()
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		var out urlEncodedBase64Bench
+
+		if err := json.Unmarshal(buf, &out); err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
 func TestBase64UnmarshalJSON(t *testing.T) {
 	type testData struct {
 		StringData  string           `json:"string_data"`
