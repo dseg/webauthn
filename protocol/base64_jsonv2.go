@@ -18,7 +18,15 @@ func (e URLEncodedBase64) MarshalJSONTo(enc *jsontext.Encoder) error {
 		return enc.WriteToken(jsontext.Null)
 	}
 
-	return enc.WriteToken(jsontext.String(base64.RawURLEncoding.EncodeToString(e)))
+	// Base64-url alphabet is JSON-safe, so we hand-assemble "<b64>" into the
+	// encoder's own scratch buffer and emit it as a single raw value. This
+	// skips the string returned by EncodeToString and the jsontext.Token wrap.
+	b := enc.AvailableBuffer()
+	b = append(b, '"')
+	b = base64.RawURLEncoding.AppendEncode(b, e)
+	b = append(b, '"')
+
+	return enc.WriteValue(b)
 }
 
 // UnmarshalJSONFrom is the encoding/json/v2 equivalent of [URLEncodedBase64.UnmarshalJSON].

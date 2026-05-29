@@ -21,13 +21,13 @@ import (
 func (c *Credential) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 	type credentialAlias Credential
 
-	var tmp credentialAlias
-
-	if err := jsonv2.UnmarshalDecode(dec, &tmp); err != nil {
+	// Decode straight into *c through the alias-typed pointer: the underlying
+	// memory is identical, so this skips the temporary credentialAlias value and
+	// the *c = Credential(tmp) copy while still suppressing UnmarshalJSONFrom
+	// recursion (the alias has no method set).
+	if err := jsonv2.UnmarshalDecode(dec, (*credentialAlias)(c)); err != nil {
 		return err
 	}
-
-	*c = Credential(tmp)
 
 	if c.AttestationFormat == "" && protocol.IsAttestationFormatString(c.AttestationType) {
 		c.AttestationFormat = c.AttestationType
